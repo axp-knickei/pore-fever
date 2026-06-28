@@ -46,12 +46,26 @@ if (file.exists(taxa_file)) {
   }
 
   taxa_mat <- taxa_mat[common_samples, , drop = FALSE]
+
+  # Filter out empty samples (row sum == 0) to avoid downstream errors
+  sample_sums <- rowSums(taxa_mat)
+  valid_samples <- names(sample_sums[sample_sums > 0])
+  if (length(valid_samples) < 5) {
+    stop("Too few non-empty matching samples between taxa table and metadata.")
+  }
+
+  taxa_mat <- taxa_mat[valid_samples, , drop = FALSE]
   metadata2 <- metadata %>%
-    filter(sample_id %in% common_samples) %>%
-    arrange(match(sample_id, common_samples))
+    filter(sample_id %in% valid_samples) %>%
+    arrange(match(sample_id, valid_samples))
+
+  # Rarefy for richness to correct for sequencing depth bias
+  min_depth <- min(rowSums(taxa_mat))
+  set.seed(42) # Ensure reproducibility for rarefaction
+  taxa_mat_rarefied <- rrarefy(taxa_mat, sample = min_depth)
 
   shannon <- diversity(taxa_mat, index = "shannon")
-  richness <- specnumber(taxa_mat)
+  richness <- specnumber(taxa_mat_rarefied)
 
   alpha_df <- metadata2 %>%
     mutate(
@@ -80,14 +94,20 @@ if (file.exists(taxa_file)) {
     dpi = 300
   )
 
-  bray <- vegdist(taxa_mat, method = "bray")
-  permanova <- adonis2(bray ~ treatment + timepoint, data = metadata2)
+  # Convert to relative abundance before calculating Bray-Curtis
+  taxa_mat_rel <- decostand(taxa_mat, method = "total")
+
+  bray <- vegdist(taxa_mat_rel, method = "bray")
+
+  # Update adonis2 to test interaction and account for repeated measures (replicate as strata)
+  permanova <- adonis2(bray ~ treatment * timepoint, data = metadata2, strata = metadata2$replicate, by = "margin")
   capture.output(
     permanova,
     file = file.path(outdir, "permanova_taxa_bray_treatment_timepoint.txt")
   )
 
-  pcoa <- cmdscale(bray, k = 2, eig = TRUE)
+  # Use add = TRUE to correct for negative eigenvalues in Bray-Curtis PCoA
+  pcoa <- cmdscale(bray, k = 2, eig = TRUE, add = TRUE)
   pcoa_df <- metadata2 %>%
     mutate(
       PCoA1 = pcoa$points[, 1],
