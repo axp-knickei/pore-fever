@@ -1,3 +1,9 @@
+# From Basecalls to Biosynthetic Functions: "Pore-Fever" Pipeline
+
+An end-to-end, automated bioinformatics workflow engineered for long-read Oxford Nanopore Technology (ONT) metagenomic tracking. Designed to process longitudinal multi-timepoint datasets, this pipeline handles everything from raw error-prone basecalls down to high-resolution functional insights, metabolic blueprint reconstruction, and statistical modeling.
+
+![Pore-Fever Pipeline Overview](Pore_fever_C.jpg)
+
 # ONT Mouse Gut Metagenomics
 
 Script scaffold for a 75-sample Oxford Nanopore mouse gut metagenomics study:
@@ -11,6 +17,91 @@ Script scaffold for a 75-sample Oxford Nanopore mouse gut metagenomics study:
 ## Repository Status
 
 This repository is a script scaffold and learning-oriented workflow template for ONT long-read mouse gut metagenomics. It is not yet a fully validated production pipeline. Before real analysis, users must confirm sample metadata, FASTQ paths, database paths, software versions, filtering thresholds, adapter-trimming behavior, and HPC resource settings.
+
+## 📋 Pipeline Architecture & Workflow
+
+The pipeline is structured into three discrete phases, linking data processing natively with specific output directories:
+
+### 1. Input & Preprocessing
+* **Raw Long Reads:** Processes ONT fecal samples across multi-timepoint longitudinal studies (e.g., T1–T5).
+* **Quality Control & Trimming:** Utilizes `Chopper` and `SeqKit` to filter low-quality, short, or error-prone reads (`data/trimmed_fastq`).
+* **Host Contamination Removal:** Aligns reads using `Minimap2` against a reference genome (e.g., Mouse Ref) to extract clean microbial reads (`data/host_removed_fastq`).
+
+### 2. Core Genomic Reconstruction
+* **Co-assembly:** Reconstructs complex communities via `metaFlye` (`results/assembly`).
+* **Metagenome-Assembled Genomes (MAGs):** Extracts high-quality draft genomes using `SemiBin2` (`results/bins`).
+* **Dereplication & Classification:** Generates a non-redundant set of MAGs via `dRep` (`results/mag_dereplication`) and resolves taxonomy using `GTDB-Tk` (`results/mag_taxonomy`).
+* **Fast Profiling:** Runs parallel read-based taxonomic profiling using `sylph` to output taxonomic abundance matrices.
+
+### 3. Output: Functional Insights & Ecology
+* **Functional Annotation:** Predicts genes using `Bakta` to compile non-redundant gene catalogs (`results/gene_catalog`), reconstructing carbohydrate metabolism, amino acid synthesis, and energy production profiles.
+* **Secondary Metabolites:** Identifies Biosynthetic Gene Clusters (BGCs) (`results/functional_annotation`).
+* **Downstream Ecology & Statistics:** Leverages R workflows to compute Alpha/Beta diversity indices, track longitudinal compositional dynamics, and evaluate differential abundance via `ANCOM-BC2` and `MaAsLin2` (`results/statistics`, `results/figures`).
+
+---
+
+## 📂 Repository Structure
+
+```text
+pore-fever/
+├── config/                  # Configuration profiles & sample sheets
+│   ├── config.sh            # Global pipeline environment variables
+│   └── samples.tsv          # Metadata tracking for longitudinal timepoints
+├── data/                    # Fastq directories (Raw, Trimmed, Host-Removed)
+├── envs/                    # Conda deployment environments
+├── results/                 # Downstream outputs (Assemblies, MAGs, Taxonomy, Figures)
+├── logs/                    # Runtime stdout and error traces
+└── scripts/                 # Core execution architecture
+    ├── bash/                # Execution steps (Preprocessing, Assembly, Annotation)
+    ├── python/              # Post-processing taxonomy and QC tables
+    └── r/                   # Statistical ecology, data modeling, and visualization
+
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+* Linux environment (Ubuntu / WSL)
+* Conda or Mamba package managers
+
+### Execution Sequence
+
+1. **Configure Environment:** Update variables inside `config/config.sh` and list your input files within `config/samples.tsv`.
+2. **Preprocess Reads:**
+```bash
+bash scripts/bash/01_preprocess_qc_host_removal.sh
+
+```
+
+
+3. **Taxonomic Profiling:**
+```bash
+bash scripts/bash/02_taxonomic_profiling.sh
+
+```
+
+
+4. **Assembly & Binning Pipeline:**
+```bash
+bash scripts/bash/03_assembly_mag_pipeline.sh
+
+```
+
+
+5. **Functional Annotation:**
+```bash
+bash scripts/bash/04_functional_annotation.sh
+
+```
+
+
+6. **Ecology, Statistics, & Report Generation:**
+```bash
+Rscript scripts/r/06_statistics_diversity_differential.R
+Rscript scripts/r/07_visualization_reporting.R
+bash scripts/bash/08_reproducibility_report.sh
+
+```
 
 ## Quick Start: Recommended First Analysis Route
 
