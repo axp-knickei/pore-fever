@@ -1,4 +1,4 @@
-# ONT Mouse Gut Metagenomics
+# pore-fever: ONT Mouse Gut Metagenomics
 
 Script scaffold for a 75-sample Oxford Nanopore mouse gut metagenomics study:
 
