@@ -55,7 +55,7 @@ pore-fever/
     ├── bash/                # Execution steps (Preprocessing, Assembly, Annotation)
     ├── python/              # Post-processing taxonomy and QC tables
     └── r/                   # Statistical ecology, data modeling, and visualization
-
+```
 
 ## 🚀 Getting Started
 
